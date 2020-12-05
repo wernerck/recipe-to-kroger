@@ -646,7 +646,7 @@ def kroger_test():
     # response = requests.get(secrets.REDIRECT_URI, params=params, auth=oauth)
     # print (response.status_code)
 
-def get_kroger_code():
+def get_kroger_auth():
     krog_token_url = 'https://api.kroger.com/v1/connect/oauth2/token'
     krog_auth_url = 'https://api.kroger.com/v1/connect/oauth2/authorize'
 
@@ -856,7 +856,7 @@ if __name__ == "__main__":
                 print("You will have to log in to Kroger during authentication")
                 print("Create a new Kroger account if you have security or access concerns")
 
-                get_kroger_code()
+                get_kroger_auth()
 
         ############# PLOTS ############# 
         while flag_e == True: 
