@@ -235,7 +235,10 @@ class Recipe:
         .find_all(self.INGREDIENTS_CONTAINER_TAG, class_="ingredients-item-name"))
         ingrs = []
         for i in ing:
-            ingrs.append(i.string.strip())
+            try:
+                ingrs.append(i.string.strip())
+            except:
+                continue # very specific edge case for "tempeh" --> there was a link in the ingredients
         return ingrs
 
     def extract_nutrition(self, soup):
@@ -512,7 +515,7 @@ def save_cache(cache, cache_fname):
     contents_to_write = json.dumps(cache)
     cache_file.write(contents_to_write)
     cache_file.close()
-    time.sleep(.05) # to solve cache issue
+    time.sleep(.2) # to solve cache issue --> really large
 
 
 def make_url_request_using_cache(url, cache, cache_fname):
@@ -644,8 +647,9 @@ def nutrition_plot(nutrition_list, recipes_list):
     # parse nutrition_list, already in per serving format
     calorie_list = parse_list_from_db(nutrition_list)
 
+    # retrieve number of calories --> int portion
     num_calories = []
-    for c in calorie_list:
+    for c in calorie_list: 
         calorie = c[0].split()[0]
         num_calories.append(int(calorie))
     
@@ -688,7 +692,7 @@ def ratings_reviews_plot(recipes_list, num_ratings, num_reviews):
     basic_layout = go.Layout(title="Recipes: Ratings vs. Reviews")
 
     fig = go.Figure(data=scatter_data, layout=basic_layout)
-    fig.update_layout(xaxis_title="Number of Reviews", yaxis_title="Number of Ratings")
+    fig.update_layout(xaxis_title="Number of Reviews", yaxis_title="Number of Ratings", autosize=False, width = 512, height = 512)
     fig.write_html("plot2.html", auto_open=True)
 
 def rating_score_plot(recipe_list, num_ratings, num_reviews, rating, num_steps): # from db
@@ -721,7 +725,7 @@ def rating_score_plot(recipe_list, num_ratings, num_reviews, rating, num_steps):
     rating_2 = parse_single_from_db(rating) # remove tuples
     num_steps_2 = parse_single_from_db(num_steps) # remove tuples
 
-    star_rating = []
+    star_rating = [] # convert star ratings from str to float, because most of them have decimals
     for r in rating_2:
         flr = float(r)
         star_rating.append(flr)
@@ -784,10 +788,13 @@ def ingredients_parsing(master_ingredients_list):
     "hot", "chilled", "refrigerated", "container", "packed", "pack", "finely", "fine", "chopped",
     "instant", "mix", "room temperature", "diced", "sliced", "uncooked", "optional", "mashed",
     "peeled", "bulk", "pureed", "frozen", "ground", "dried", "minced", "cooked", "to", "taste",
-    "boxes", "such as", "large", "small", "sheets", "grated", "pinch", "sifted", "lightly", 
+    "boxes", "such", "as" "large", "small", "sheets", "grated", "pinch", "sifted", "lightly", 
     "light", "dark", "medium", "fresh", "jar", "boxed", "coarsely", "rinsed", "bunch", "freshly",
     "as", "needed", "bag", "roughly", "very", "thinly", "thin", "cubed", "piece", "matchsticks",
-    "grated", "part", "just", "ripe", "raw"] 
+    "grated", "part", "just", "ripe", "raw", "sprigs", "stalks", "stalk", "store-bought", "serving", 
+    "crushed", "whole", "drained", "sprigs", "sprig", "for", "decoration", "dash", "box", "dry", 
+    "large", "drizzling", "carton", "stalk", "soaked", "granules", "trimmed", "head", "milliliter",
+    "peel", "leaves", "prepared", "garnish", "superfine", "crumbles", "topping"] 
     # stopwords were derived from looking at many recipes
 
     stopwords_2 = ["(", ")", "."] # punctuation is treated differently
@@ -846,9 +853,10 @@ def allergen_plot(recipe_list, cleaned_ingredients_list):
     -------
     None
     '''
+    
     # allows you to watch out and switch the recipe/make substitutions
     # define strings related to common allergens: 
-
+    
     dairy = ["butter", "buttermilk", "cream cheese", "cheese", "cottage cheese", "cream", "curds", "ghee", "milk", 
     "sour cream", "whey", "yogurt"]
 
@@ -909,7 +917,7 @@ def allergen_plot(recipe_list, cleaned_ingredients_list):
     fig.add_trace(go.Bar(x=x, y=tree_nut_list, name="Tree Nut"))
     fig.add_trace(go.Bar(x=x, y=other_list, name="Other Ingredients"))
 
-    fig.update_layout(barmode="stack", title="Common Allergens in Recipes", xaxis_title="Recipe", yaxis_title="Number of Ingredients", autosize=False, width = 800, height = 400)
+    fig.update_layout(barmode="stack", title="Common Allergens in Recipes", xaxis_title="Recipe", yaxis_title="Number of Ingredients")
     fig.update_xaxes(categoryorder="category ascending")
     fig.write_html("plot4.html", auto_open=True)
 
@@ -1114,10 +1122,9 @@ if __name__ == "__main__":
     # Load the cache, save in global variable
     CACHE_DICT = load_cache(CACHE_FILE_NAME)
     CACHE_DICT_K = load_cache(CACHE_FILE_K)
-    
+
     create_tables()
 
-    ######### INTERACTIVE #########
     flag = True # set flag
     flag_a = True # set flag
     flag_c = False # set flag
@@ -1125,13 +1132,19 @@ if __name__ == "__main__":
     flag_e = False # set flag
     flag_f = False # set flag
 
+    ######### INTERACTIVE #########
+    print()
+    print("~-" * 37)
+    print("SI 507 Final: Allrecipes to Kroger Cart") # Name
+    print("~-" * 37)
+
     while flag == True:
         while flag_a == True: 
             print()
-            recipe_query = input("Enter a recipe query (e.g. cake, pasta, burrito) or \"exit\": ").lower() # force to lower case
+            recipe_query = input("Enter a recipe query (e.g. cake, pasta, burrito) or exit (E): ").lower() # force to lower case
             print()
 
-            if recipe_query == "exit":
+            if recipe_query == "exit" or recipe_query == "e":
                 print("Goodbye!")
                 sys.exit()
                 
@@ -1323,8 +1336,8 @@ if __name__ == "__main__":
             
                 ######### KROGER API #########
                 print()
-                print("You will have to log in to Kroger during authentication")
-                print("Create a new Kroger account at https://www.kroger.com/account/create?redirectUrl=/ \nIf you don't want to use your main account to test the program")
+                print("You will have to log in to Kroger during initial authentication")
+                print("If you don't want to use your main account to test the program...\nCreate a new Kroger account at https://www.kroger.com/account/create?redirectUrl=/")
                 print()
 
                 # authorizes, finds product upcs, passes to cart
