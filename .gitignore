@@ -1,4 +1,5 @@
 secrets.py
+cache_secret.json
 __pycache__
 plot1.html
 plot2.html
